@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>여행 계획 도우미 · Trip Planner</title>
+<style>
+  :root{
+    --bg:#0f1115; --surface:#1a1d24; --surface2:#22262f; --border:#31353f;
+    --text:#e9ebf0; --muted:#9aa0ad; --accent:#6ea8fe; --accent2:#7ee2b8;
+    --warn:#f4b860; --danger:#f27983; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    background:linear-gradient(160deg,#0f1115,#141821);color:var(--text);
+    line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto;padding:28px 18px 80px}
+  header{text-align:center;margin-bottom:24px}
+  header .kicker{font-size:12px;letter-spacing:.15em;color:var(--accent);font-weight:700}
+  header h1{margin:6px 0 4px;font-size:26px}
+  header p{margin:0;color:var(--muted);font-size:14px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:720px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px}
+  .card h2{margin:0 0 14px;font-size:15px;display:flex;align-items:center;gap:8px}
+  .card h2 .num{background:var(--accent);color:#0f1115;border-radius:7px;
+    font-size:12px;font-weight:800;padding:2px 8px}
+  .field{margin-bottom:13px}
+  .field:last-child{margin-bottom:0}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px;font-weight:600}
+  input,select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);
+    color:var(--text);border-radius:9px;padding:9px 11px;font-size:14px;font-family:inherit}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+  textarea{resize:vertical;min-height:60px}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;
+    padding:6px 13px;font-size:13px;cursor:pointer;user-select:none;transition:.12s}
+  .chip:hover{border-color:var(--accent)}
+  .chip.on{background:var(--accent);color:#0f1115;border-color:var(--accent);font-weight:700}
+  .chip.on.g{background:var(--accent2);border-color:var(--accent2)}
+  .hint{font-size:11.5px;color:var(--muted);margin-top:4px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .actions{margin:22px 0 8px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  button.go{background:linear-gradient(135deg,var(--accent),#4d86e8);color:#0f1115;border:none;
+    font-weight:800;font-size:15px;padding:12px 28px;border-radius:11px;cursor:pointer}
+  button.reset{background:transparent;color:var(--muted);border:1px solid var(--border);
+    padding:12px 20px;border-radius:11px;cursor:pointer;font-size:14px}
+  button.go:hover{filter:brightness(1.08)}
+  #result{margin-top:24px;display:none}
+  #result.show{display:block;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .summary-head{background:linear-gradient(135deg,#22314d,#1a2233);border:1px solid var(--border);
+    border-radius:var(--radius);padding:20px;margin-bottom:16px}
+  .summary-head h3{margin:0 0 4px;font-size:20px}
+  .summary-head .sub{color:var(--muted);font-size:13px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+  @media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:rgba(0,0,0,.25);border-radius:10px;padding:11px}
+  .stat .v{font-size:19px;font-weight:800}
+  .stat .l{font-size:11px;color:var(--muted);margin-top:2px}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px 18px;margin-bottom:14px}
+  .panel h4{margin:0 0 10px;font-size:14px;color:var(--accent)}
+  .panel ul{margin:0;padding-left:18px}
+  .panel li{margin:5px 0;font-size:13.5px}
+  .badge{display:inline-block;font-size:11px;border-radius:5px;padding:2px 7px;margin-right:6px;font-weight:700}
+  .badge.code{background:#2a3a55;color:var(--accent)}
+  .badge.ai{background:#25443a;color:var(--accent2)}
+  .warnbox{background:rgba(244,184,96,.1);border:1px solid var(--warn);border-radius:10px;
+    padding:11px 14px;font-size:13px;color:var(--warn);margin-bottom:14px}
+  .foot{text-align:center;color:var(--muted);font-size:12px;margin-top:26px;line-height:1.7}
+  .legend{display:flex;gap:16px;justify-content:center;margin-top:10px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .dot{width:9px;height:9px;border-radius:50%}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">TRIP PLANNER · JEV 방식 확장</div>
+    <h1>✈️ 여행 계획 도우미</h1>
+    <p>조건을 입력하면 — <b>계산은 코드가</b>, <b>스타일 판단은 규칙이</b> 나눠서 계획 초안을 만듭니다.</p>
+  </header>
+
+  <div class="grid">
+    <!-- 1 인원 & 동행 -->
+    <div class="card">
+      <h2><span class="num">1</span> 누구와, 몇 명이</h2>
+      <div class="field">
+        <label>여행 인원 (명)</label>
+        <input type="number" id="people" min="1" value="2">
+      </div>
+      <div class="field">
+        <label>동행 유형 <span class="hint">— 계획 성격을 좌우</span></label>
+        <div class="chips" id="who">
+          <span class="chip" data-v="혼자">혼자</span>
+          <span class="chip on" data-v="친구">친구</span>
+          <span class="chip" data-v="연인">연인</span>
+          <span class="chip" data-v="가족">가족</span>
+          <span class="chip" data-v="부모님">부모님</span>
+          <span class="chip" data-v="단체">단체·동아리</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>특별히 고려할 동행 <span class="hint">(복수 선택)</span></label>
+        <div class="chips" id="care">
+          <span class="chip" data-v="어린이">어린이 동반</span>
+          <span class="chip" data-v="유아">영유아</span>
+          <span class="chip" data-v="어르신">어르신</span>
+          <span class="chip" data-v="반려동물">반려동물</span>
+          <span class="chip" data-v="이동약자">이동 약자</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 예산 -->
+    <div class="card">
+      <h2><span class="num">2</span> 예산</h2>
+      <div class="field">
+        <label>총예산 (원)</label>
+        <input type="number" id="budget" min="0" step="10000" value="1000000">
+        <div class="hint" id="perPersonHint">1인당 예산이 자동 계산됩니다.</div>
+      </div>
+      <div class="field">
+        <label>예산 성격</label>
+        <select id="budgetType">
+          <option value="tight">아껴서 알뜰하게</option>
+          <option value="normal" selected>적당히 즐기기</option>
+          <option value="rich">여유롭게 편하게</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>여행 시기 (계절)</label>
+        <div class="chips" id="season">
+          <span class="chip" data-v="봄">봄</span>
+          <span class="chip on" data-v="여름">여름</span>
+          <span class="chip" data-v="가을">가을</span>
+          <span class="chip" data-v="겨울">겨울</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 이동수단 -->
+    <div class="card">
+      <h2><span class="num">3</span> 이동수단</h2>
+      <div class="field">
+        <label>주 이동수단</label>
+        <div class="chips" id="transport">
+          <span class="chip on" data-v="자동차">자동차</span>
+          <span class="chip" data-v="기차">기차·KTX</span>
+          <span class="chip" data-v="비행기">비행기</span>
+          <span class="chip" data-v="버스">고속버스</span>
+          <span class="chip" data-v="대중교통">현지 대중교통</span>
+          <span class="chip" data-v="도보">도보·자전거</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>목적지 / 지역</label>
+        <input type="text" id="dest" placeholder="예: 제주도, 부산, 도쿄, 미정">
+      </div>
+      <div class="field">
+        <label>국내 / 해외</label>
+        <select id="scope">
+          <option value="domestic" selected>국내</option>
+          <option value="overseas">해외</option>
+          <option value="undecided">아직 미정</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 4 기간 -->
+    <div class="card">
+      <h2><span class="num">4</span> 여행 기간</h2>
+      <div class="field">
+        <label>대략 언제쯤? <span class="hint">— 정확한 날짜가 없으면 이걸로</span></label>
+        <div class="chips" id="roughWhen">
+          <span class="chip on" data-v="미정">아직 미정</span>
+          <span class="chip" data-v="이번달">이번 달</span>
+          <span class="chip" data-v="다음달">다음 달</span>
+          <span class="chip" data-v="주말">이번·다음 주말</span>
+          <span class="chip" data-v="방학">방학·연휴</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>정확한 날짜 (선택)</label>
+        <div class="row2">
+          <input type="date" id="start" aria-label="출발일">
+          <input type="date" id="end" aria-label="도착일">
+        </div>
+      </div>
+      <div class="field">
+        <label>며칠 여행인가요?</label>
+        <div class="row2">
+          <input type="number" id="nights" min="0" placeholder="박" value="2">
+          <input type="number" id="days" min="1" placeholder="일" value="3">
+        </div>
+        <div class="hint">날짜를 넣으면 박·일이 자동 계산됩니다. 날짜 없이 박·일만 넣어도 됩니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 실제 항공권 조회 -->
+  <div class="card" style="margin-top:14px">
+    <h2><span class="num">✈</span> 실제 항공권 가격 조회 <span style="font-size:11px;color:var(--muted);font-weight:400">— Travelpayouts(Aviasales) 실제 검색가</span></h2>
+    <div id="apiStatus" class="warnbox" style="margin-bottom:14px">서버 상태 확인 중…</div>
+    <div class="grid">
+      <div class="field">
+        <label>출발 공항</label>
+        <select id="origin">
+          <option value="ICN" selected>인천 (ICN)</option>
+          <option value="GMP">김포 (GMP)</option>
+          <option value="PUS">부산·김해 (PUS)</option>
+          <option value="CJU">제주 (CJU)</option>
+          <option value="TAE">대구 (TAE)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>도착 공항 <span class="hint">(IATA 3글자)</span></label>
+        <input type="text" id="arrCode" placeholder="예: CJU, NRT, BKK, DAD" maxlength="3" style="text-transform:uppercase">
+        <div class="hint">위 목적지 이름을 자동으로 코드로 바꿔 채웁니다. 없으면 직접 입력하세요.</div>
+      </div>
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400">
+        <input type="checkbox" id="nonStop" style="width:auto"> 직항만 보기
+      </label>
+    </div>
+    <button class="go" id="flightBtn" style="width:100%;margin-top:4px">실제 항공권 검색 →</button>
+    <div id="flightResult" style="margin-top:14px"></div>
+  </div>
+
+  <!-- 5 추가 반영: 스타일 -->
+  <div class="card" style="margin-top:14px">
+    <h2><span class="num">＋</span> 추가로 반영할 것 — 여행 스타일 · 선호</h2>
+    <div class="grid">
+      <div class="field">
+        <label>여행 스타일 <span class="hint">(복수 선택 · 판단 기준)</span></label>
+        <div class="chips" id="style">
+          <span class="chip g" data-v="휴양">휴양·힐링</span>
+          <span class="chip g" data-v="관광">관광·명소</span>
+          <span class="chip g" data-v="액티비티">액티비티</span>
+          <span class="chip g" data-v="미식">맛집·미식</span>
+          <span class="chip g" data-v="쇼핑">쇼핑</span>
+          <span class="chip g" data-v="자연">자연·경치</span>
+          <span class="chip g" data-v="문화">문화·역사</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>숙소 선호</label>
+        <select id="stay">
+          <option value="any" selected>상관없음</option>
+          <option value="hotel">호텔</option>
+          <option value="pension">펜션·풀빌라</option>
+          <option value="guesthouse">게스트하우스</option>
+          <option value="camp">캠핑·글램핑</option>
+        </select>
+        <div class="field" style="margin-top:13px">
+          <label>꼭 반영할 요청 / 메모</label>
+          <textarea id="note" placeholder="예: 새벽 이동 피하기, 뷰 좋은 카페, 실내 위주"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="go" id="planBtn">계획 초안 만들기 →</button>
+    <button class="reset" id="resetBtn">초기화</button>
+  </div>
+
+  <!-- 결과 -->
+  <div id="result"></div>
+
+  <div class="foot">
+    이 도구는 입력한 조건을 <b>규칙과 계산으로 정리</b>한 초안을 만듭니다. 실제 예약·검색·요금 조회는 하지 않습니다.<br>
+    JEV 사이트의 설계(입력·기준=사람 / 판단=AI / 계산=코드 / 글쓰기=LLM)를 여행 계획으로 확장한 수업용 예시입니다.
+    <div class="legend">
+      <span><span class="dot" style="background:var(--accent)"></span> 코드가 계산한 값</span>
+      <span><span class="dot" style="background:var(--accent2)"></span> 규칙이 판단한 추천</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- chip toggle ----------
+function setupChips(id, multi){
+  const box = document.getElementById(id);
+  box.addEventListener('click', e=>{
+    const c = e.target.closest('.chip'); if(!c) return;
+    if(multi){ c.classList.toggle('on'); }
+    else{ box.querySelectorAll('.chip').forEach(x=>x.classList.remove('on')); c.classList.add('on'); }
+  });
+}
+setupChips('who',false);
+setupChips('care',true);
+setupChips('season',false);
+setupChips('transport',false);
+setupChips('style',true);
+setupChips('roughWhen',false);
+
+function selected(id){ return [...document.getElementById(id).querySelectorAll('.chip.on')].map(c=>c.dataset.v); }
+function selectedOne(id){ const c=document.getElementById(id).querySelector('.chip.on'); return c?c.dataset.v:''; }
+
+// ---------- 1인당 예산 실시간 ----------
+const budgetEl=document.getElementById('budget'), peopleEl=document.getElementById('people');
+function updatePerPerson(){
+  const b=+budgetEl.value||0, p=Math.max(1,+peopleEl.value||1);
+  document.getElementById('perPersonHint').textContent =
+    '1인당 약 ' + Math.round(b/p).toLocaleString() + '원 (' + p + '명 기준)';
+}
+budgetEl.addEventListener('input',updatePerPerson);
+peopleEl.addEventListener('input',updatePerPerson);
+updatePerPerson();
+
+// ---------- 날짜 -> 박/일 ----------
+const startEl=document.getElementById('start'), endEl=document.getElementById('end'),
+      nightsEl=document.getElementById('nights'), daysEl=document.getElementById('days');
+function updateNights(){
+  if(startEl.value && endEl.value){
+    const d1=new Date(startEl.value), d2=new Date(endEl.value);
+    const n=Math.round((d2-d1)/86400000);
+    if(n>=0){ nightsEl.value=n; daysEl.value=n+1; }
+  }
+}
+startEl.addEventListener('change',updateNights);
+endEl.addEventListener('change',updateNights);
+
+// ---------- 목적지 추천 데이터 (국내) ----------
+// 각 후보: 이름, 어울리는 계절, 스타일 태그, 성격
+const DEST_DB=[
+  {name:'제주도', seasons:['봄','여름','가을','겨울'], styles:['자연','휴양','미식','액티비티'], scope:'domestic', good:'사계절 어디든 무난 · 렌터카로 자유로운 동선, 해변·오름·맛집이 고루 있음'},
+  {name:'강릉·속초', seasons:['여름','가을'], styles:['자연','휴양','미식'], scope:'domestic', good:'여름 바다와 가을 단풍·커피거리 · 서울에서 접근 쉬움'},
+  {name:'부산', seasons:['봄','여름','가을'], styles:['관광','미식','액티비티','문화'], scope:'domestic', good:'해변·야경·먹거리·도시 여행을 한 번에, 대중교통이 편리함'},
+  {name:'경주', seasons:['봄','가을'], styles:['문화','관광','자연'], scope:'domestic', good:'봄 벚꽃·가을 단풍과 유적지 산책, 어르신·가족 동행에 무난한 평지 동선'},
+  {name:'전주', seasons:['봄','가을','겨울'], styles:['미식','문화','관광'], scope:'domestic', good:'한옥마을과 먹거리 중심 · 도보 여행에 적합, 실내 코스가 많아 추위·더위 대비 쉬움'},
+  {name:'여수', seasons:['봄','여름','가을'], styles:['자연','미식','휴양'], scope:'domestic', good:'밤바다 야경과 해산물 · 커플·친구 여행 인기'},
+  {name:'평창·정선', seasons:['겨울'], styles:['액티비티','자연','휴양'], scope:'domestic', good:'겨울 스키·눈 풍경 · 액티비티 중심 겨울 여행의 대표지'},
+  {name:'남해·통영', seasons:['봄','여름','가을'], styles:['자연','휴양','미식'], scope:'domestic', good:'한적한 바다와 섬 풍경 · 붐비는 곳을 피하고 싶은 휴양에 적합'},
+  {name:'서울 근교(가평·양평)', seasons:['봄','여름','가을'], styles:['자연','휴양','액티비티'], scope:'domestic', good:'짧은 이동으로 자연·글램핑 · 예산·시간이 빠듯할 때 무난'},
+  {name:'안동·단양', seasons:['가을','겨울'], styles:['문화','자연','관광'], scope:'domestic', good:'가을 경치와 전통문화, 한적한 힐링 코스'}
+];
+const DEST_ABROAD=[
+  {name:'오사카·교토(일본)', seasons:['봄','가을'], styles:['미식','문화','쇼핑','관광'], scope:'overseas', good:'가까운 해외 · 봄 벚꽃·가을 단풍과 먹거리, 짧은 일정에도 알찬 도시 여행'},
+  {name:'다낭(베트남)', seasons:['봄','여름','가을','겨울'], styles:['휴양','미식','자연'], scope:'overseas', good:'가성비 리조트 휴양 · 겨울에도 따뜻해 성수기를 피하기 좋음'},
+  {name:'방콕(태국)', seasons:['겨울','봄'], styles:['미식','쇼핑','관광','휴양'], scope:'overseas', good:'겨울철 따뜻한 도시 여행 · 물가가 낮아 알뜰 여행에 유리'},
+  {name:'홋카이도(일본)', seasons:['겨울'], styles:['자연','액티비티','미식'], scope:'overseas', good:'겨울 설경·스키·해산물 · 겨울 해외 여행의 대표지'},
+  {name:'발리(인도네시아)', seasons:['봄','여름','가을'], styles:['휴양','자연','액티비티'], scope:'overseas', good:'풀빌라 휴양과 서핑·자연 · 연인·가족 힐링 여행'}
+];
+
+// 목적지별 실제 장소 DB (POI) — 카테고리별로 실제 명소·맛집·자연·쇼핑을 이름으로 제공
+// 키는 목적지 입력을 정규화(공백제거)한 값. 세부 지역명도 포함.
+const PLACES={
+  '제주':{ 명소:['성산일출봉','우도','섭지코지','한라산 어리목'], 자연:['협재해변','천지연폭포','카멜리아힐'], 미식:['흑돼지 거리(제주시)','올레시장 회센터','동문시장'], 액티비티:['비자림 숲길','우도 자전거','스쿠버·스노클링(서귀포)'], 쇼핑:['제주 면세점','동문시장'] },
+  '제주도':{ 명소:['성산일출봉','우도','섭지코지','한라산 어리목'], 자연:['협재해변','천지연폭포','카멜리아힐'], 미식:['흑돼지 거리(제주시)','올레시장 회센터','동문시장'], 액티비티:['비자림 숲길','우도 자전거','스쿠버·스노클링(서귀포)'], 쇼핑:['제주 면세점','동문시장'] },
+  '부산':{ 명소:['해운대','광안리','감천문화마을','태종대'], 자연:['이기대 해안산책로','아미산 전망대'], 미식:['자갈치시장','밀면·돼지국밥(서면)','전포 카페거리'], 액티비티:['송도 해상케이블카','블루라인파크 해변열차'], 쇼핑:['서면','광복동·남포동'] },
+  '강릉':{ 명소:['경포대','정동진','오죽헌'], 자연:['안목 커피거리','주문진 해변'], 미식:['초당순두부','주문진 회센터'], 액티비티:['경포호 자전거','서핑(사천/강문)'], 쇼핑:['중앙시장'] },
+  '오사카':{ 명소:['오사카성','도톤보리','우메다 공중정원','시텐노지'], 자연:['오사카 조폐국 벚꽃길'], 미식:['도톤보리 다코야키·오코노미야키','구로몬 시장','신세카이 쿠시카츠'], 액티비티:['유니버설 스튜디오 재팬'], 쇼핑:['신사이바시','덴덴타운'] },
+  '교토':{ 명소:['후시미이나리 신사','기요미즈데라','금각사','아라시야마 대나무숲'], 자연:['아라시야마','철학의 길'], 미식:['니시키 시장','기온 거리 음식점'], 액티비티:['기모노 체험(기온)'], 쇼핑:['데라마치 상점가'] },
+  '도쿄':{ 명소:['센소지(아사쿠사)','시부야 스크램블','도쿄타워','메이지 신궁'], 자연:['우에노 공원','신주쿠 교엔'], 미식:['츠키지 장외시장','시부야·신주쿠 이자카야'], 액티비티:['도쿄 디즈니','팀랩 플래닛'], 쇼핑:['하라주쿠','긴자','아키하바라'] },
+  '후쿠오카':{ 명소:['오호리 공원','후쿠오카타워','다자이후 텐만구'], 자연:['노코노시마'], 미식:['나카스 포장마차(야타이)','이치란 라멘 본점','텐진 모츠나베'], 액티비티:['우미노나카미치'], 쇼핑:['텐진','캐널시티'] },
+  '다낭':{ 명소:['바나힐(골든브릿지)','미케 비치','린응사(레이디불상)'], 자연:['오행산','손트라 반도'], 미식:['한시장 로컬식당','미꽝·반쎄오'], 액티비티:['호이안 올드타운 야경','바나힐 케이블카'], 쇼핑:['한시장','빈컴플라자'] },
+  '방콕':{ 명소:['왕궁·왓프라깨우','왓포','왓아룬'], 자연:['룸피니 공원','짜오프라야 강 보트'], 미식:['짜뚜짝 주말시장 먹거리','야오와랏(차이나타운)','팟타이 노점'], 액티비티:['카오산로드','아시아티크 야시장'], 쇼핑:['시암파라곤','MBK','짜뚜짝 시장'] },
+};
+
+
+  '일본':[
+    {name:'오사카·교토', seasons:['봄','가을'], styles:['미식','문화','쇼핑','관광'], why:'먹거리·고도(古都) 문화, 짧은 일정에도 알참'},
+    {name:'도쿄', seasons:['봄','가을','겨울'], styles:['쇼핑','관광','미식','문화'], why:'쇼핑·명소·트렌드 중심 대도시'},
+    {name:'후쿠오카', seasons:['봄','가을','겨울'], styles:['미식','휴양','쇼핑'], why:'가까운 거리·라멘 등 먹거리, 온천 근교'},
+    {name:'삿포로·홋카이도', seasons:['겨울','여름'], styles:['자연','액티비티','미식'], why:'겨울 설경·스키, 여름 시원한 자연'},
+    {name:'오키나와', seasons:['여름','봄'], styles:['휴양','자연','액티비티'], why:'에메랄드빛 바다·리조트 휴양'}
+  ],
+  '베트남':[
+    {name:'다낭·호이안', seasons:['봄','여름','가을','겨울'], styles:['휴양','미식','자연'], why:'가성비 리조트·해변, 호이안 야경'},
+    {name:'하노이·하롱베이', seasons:['봄','가을'], styles:['문화','자연','관광'], why:'고도 문화와 하롱베이 크루즈'},
+    {name:'호치민·무이네', seasons:['겨울','봄'], styles:['미식','쇼핑','액티비티'], why:'도시 여행과 사막·해변 근교'}
+  ],
+  '태국':[
+    {name:'방콕', seasons:['겨울','봄'], styles:['미식','쇼핑','관광'], why:'저렴한 물가·야시장·사원 관광'},
+    {name:'치앙마이', seasons:['겨울'], styles:['문화','자연','휴양'], why:'한적한 고도 문화와 자연 힐링'},
+    {name:'푸켓·끄라비', seasons:['겨울','봄'], styles:['휴양','자연','액티비티'], why:'해변 리조트와 섬 투어'}
+  ],
+  '한국':[
+    {name:'제주도', seasons:['봄','여름','가을','겨울'], styles:['자연','휴양','미식','액티비티'], why:'사계절 무난·자유로운 렌터카 동선'},
+    {name:'부산', seasons:['봄','여름','가을'], styles:['관광','미식','액티비티'], why:'해변·야경·먹거리 도시 여행'},
+    {name:'강릉·속초', seasons:['여름','가을'], styles:['자연','휴양','미식'], why:'바다·커피거리, 서울에서 가까움'}
+  ]
+};
+const BROAD_ALIAS={ '일본':'일본','재팬':'일본','japan':'일본',
+  '베트남':'베트남','vietnam':'베트남','태국':'태국','thailand':'태국',
+  '한국':'한국','국내':'한국','korea':'한국' };
+
+function narrowRegion(destRaw, season, styles){
+  const key=(destRaw||'').trim().toLowerCase();
+  const region=BROAD_ALIAS[key];
+  if(!region) return null;
+  const cands=BROAD_REGION[region].map(c=>{
+    let score=0; const reasons=[];
+    if(season!=='미정' && c.seasons.includes(season)){ score+=3; reasons.push(`${season}에 좋음`); }
+    const hit=styles.filter(s=>c.styles.includes(s));
+    if(hit.length){ score+=hit.length*2; reasons.push(`${hit.join('·')} 스타일과 맞음`); }
+    return {...c, score, reasons};
+  }).sort((a,b)=>b.score-a.score).slice(0,3);
+  return {region, cands};
+}
+
+// 예약 사이트 검색 링크 생성 (지역+유형으로 실제 검색 페이지로 이동)
+function bookingLinks(place, typeLabel){
+  const q=encodeURIComponent((place||'')+' '+(typeLabel||''));
+  const p=encodeURIComponent(place||'');
+  return [
+    {name:'Booking.com', url:'https://www.booking.com/searchresults.ko.html?ss='+q},
+    {name:'아고다', url:'https://www.agoda.com/ko-kr/search?city=&text='+q},
+    {name:'구글 호텔', url:'https://www.google.com/travel/search?q='+q},
+    {name:'야놀자(국내)', url:'https://www.yanolja.com/search/'+p}
+  ];
+}
+
+// 숙소 추천: 스타일·예산·동행 기반 유형 + 예약 링크
+function recommendStays(place, styles, budgetType, care, perPersonPerNight){
+  const picks=[];
+  const has=s=>styles.includes(s);
+  if(has('휴양')||care.includes('반려동물')) picks.push({type:'풀빌라·리조트',why:'프라이빗한 휴식과 부대시설, 편안한 동반 여행'});
+  if(has('액티비티')||has('자연')) picks.push({type:'글램핑·펜션',why:'자연 접근성이 좋고 액티비티 거점으로 적합'});
+  if(has('관광')||has('쇼핑')||has('미식')) picks.push({type:'시내 중심 호텔',why:'명소·상권과 가까워 이동 시간을 줄임'});
+  if(care.includes('어르신')||care.includes('유아')||care.includes('이동약자')) picks.push({type:'엘리베이터·주차 갖춘 호텔',why:'이동 편의·접근성이 중요한 동행에 적합'});
+  if(budgetType==='tight') picks.push({type:'게스트하우스·비즈니스호텔',why:'가성비 우선, 위치 대비 저렴'});
+  if(budgetType==='rich') picks.push({type:'4~5성급 호텔(조식 포함)',why:'편의·서비스 우선, 이동 피로 최소화'});
+  if(picks.length===0) picks.push({type:'3성급 시내 호텔',why:'가격·위치가 무난한 기본 선택'});
+
+  let grade='';
+  if(perPersonPerNight>0){
+    if(perPersonPerNight<50000) grade='1박 1인 5만원 미만 → 게스트하우스·저가 호텔 위주';
+    else if(perPersonPerNight<100000) grade='1박 1인 5~10만원 → 3성급·비즈니스호텔이 현실적';
+    else if(perPersonPerNight<200000) grade='1박 1인 10~20만원 → 4성급·인기 호텔 선택 폭 넓음';
+    else grade='1박 1인 20만원 이상 → 5성급·리조트·풀빌라 검토 가능';
+  }
+  const seen=new Set();
+  const uniq=picks.filter(p=>!seen.has(p.type)&&seen.add(p.type)).slice(0,3)
+    .map(p=>({...p, links:bookingLinks(place, p.type)}));
+  return {picks:uniq, grade, place};
+}
+
+function recommendDestinations(season, styles, scope, budgetType){
+  let pool = scope==='overseas' ? DEST_ABROAD
+           : scope==='domestic' ? DEST_DB
+           : DEST_DB.concat(DEST_ABROAD); // 미정이면 국내+해외 모두
+  const scored = pool.map(d=>{
+    let score=0; const reasons=[];
+    if(season!=='미정' && d.seasons.includes(season)){ score+=3; reasons.push(`${season} 시즌에 잘 맞음`); }
+    const styleHit = styles.filter(s=>d.styles.includes(s));
+    if(styleHit.length){ score+=styleHit.length*2; reasons.push(`선택한 스타일(${styleHit.join('·')})과 어울림`); }
+    if(budgetType==='tight' && /가성비|물가가 낮|짧은 이동|무난/.test(d.good)){ score+=1; reasons.push('예산 부담이 적은 편'); }
+    return {...d, score, reasons};
+  }).filter(d=>d.score>0)
+    .sort((a,b)=>b.score-a.score)
+    .slice(0,3);
+  return scored;
+}
+
+// ---------- 계획 생성 ----------
+const won = n => Math.round(n).toLocaleString()+'원';
+
+function buildPlan(){
+  const people=Math.max(1,+peopleEl.value||1);
+  const budget=+budgetEl.value||0;
+  const perPerson=budget/people;
+  const who=selectedOne('who')||'미정';
+  const care=selected('care');
+  const season=selectedOne('season')||'미정';
+  const transport=selectedOne('transport')||'미정';
+  const dest=document.getElementById('dest').value.trim()||'미정';
+  const scope={domestic:'국내',overseas:'해외',undecided:'미정'}[document.getElementById('scope').value];
+  const nights=+nightsEl.value||0, days=+daysEl.value||1;
+  const budgetType=document.getElementById('budgetType').value;
+  const styles=selected('style');
+  const stay={any:'상관없음',hotel:'호텔',pension:'펜션·풀빌라',guesthouse:'게스트하우스',camp:'캠핑·글램핑'}[document.getElementById('stay').value];
+  const note=document.getElementById('note').value.trim();
+  const roughWhen=selectedOne('roughWhen')||'미정';
+  // 시기 표기: 정확한 날짜가 없으면 러프 표현 사용
+  const hasExactDate=!!document.getElementById('start').value;
+  const roughLabel={미정:'',이번달:'이번 달',다음달:'다음 달',주말:'주말 이용',방학:'방학·연휴'}[roughWhen];
+  const whenText=hasExactDate
+      ? (document.getElementById('start').value + (document.getElementById('end').value?' ~ '+document.getElementById('end').value:''))
+      : (roughLabel||'시기 미정');
+  // 숙박 1인 1박 예산 (숙박 배분비 적용은 아래 alloc 계산 후)
+
+  // --- 코드 계산: 항목별 예산 배분 (여행 스타일에 따라 비율 조정) ---
+  let alloc={숙박:0.35,식비:0.25,교통:0.20,활동:0.12,예비:0.08};
+  if(styles.includes('미식')){ alloc.식비+=0.08; alloc.활동-=0.04; alloc.숙박-=0.04; }
+  if(styles.includes('휴양')){ alloc.숙박+=0.08; alloc.활동-=0.04; alloc.교통-=0.04; }
+  if(styles.includes('액티비티')){ alloc.활동+=0.08; alloc.숙박-=0.05; alloc.식비-=0.03; }
+  if(styles.includes('쇼핑')){ alloc.활동+=0.05; alloc.예비+=0.03; alloc.숙박-=0.05; alloc.교통-=0.03; }
+  if(transport==='비행기'){ alloc.교통+=0.08; alloc.활동-=0.04; alloc.식비-=0.04; }
+  // 음수 방지 후 정규화
+  Object.keys(alloc).forEach(k=>alloc[k]=Math.max(0.03,alloc[k]));
+  const sum=Object.values(alloc).reduce((a,b)=>a+b,0);
+  Object.keys(alloc).forEach(k=>alloc[k]=alloc[k]/sum);
+
+  const perDay = days>0 ? budget/days : budget;
+
+  // --- 규칙 판단: 스타일/동행 기반 추천 ---
+  const tips=[];
+  if(care.includes('어린이')||care.includes('유아')) tips.push('아이 동반 → 이동 구간을 짧게, 중간 휴식·수유/기저귀 공간을 미리 확인하세요.');
+  if(care.includes('어르신')||care.includes('이동약자')) tips.push('이동 약자 동행 → 계단·경사 적은 동선과 엘리베이터·주차 접근성을 우선 고려하세요.');
+  if(care.includes('반려동물')) tips.push('반려동물 동반 → 반려동물 동반 가능 숙소·식당·교통편을 사전 예약하세요.');
+  if(budgetType==='tight') tips.push('알뜰 여행 → 성수기 요금·주말 할증을 피하고, 무료 명소와 대중교통 조합을 활용하세요.');
+  if(budgetType==='rich') tips.push('여유 여행 → 이동 피로를 줄이는 직항·프라이빗 옵션과 조식 포함 숙소를 검토하세요.');
+  if(season==='여름') tips.push('여름 → 오후 실내·수상 활동을 배치하고 자외선·온열 대비를 챙기세요.');
+  if(season==='겨울') tips.push('겨울 → 일몰이 빨라 오전 일정을 넉넉히, 방한·빙판 대비를 하세요.');
+  if(transport==='자동차') tips.push('자동차 → 주차 가능 여부와 명소 간 이동 시간을 동선 순서로 묶으세요.');
+  if(transport==='비행기') tips.push('비행기 → 수하물 규정·공항 이동 시간을 감안해 첫날/막날 일정을 여유 있게 잡으세요.');
+  if(scope==='해외') tips.push('해외 → 여권 유효기간·비자·환전·로밍/유심·여행자보험을 출발 전 점검하세요.');
+  if(styles.length===0) tips.push('여행 스타일을 하나 이상 고르면 예산 배분과 추천이 더 정확해집니다.');
+
+  // --- 스타일 -> 하루 일정 템플릿 ---
+  const has=s=>styles.includes(s);
+
+  // ---------- render ----------
+  const styleTxt = styles.length? styles.join(' · ') : '미지정';
+  const careTxt = care.length? care.join(', ') : '없음';
+
+  let allocRows='';
+  const label={숙박:'🏨 숙박',식비:'🍜 식비',교통:'🚗 교통',활동:'🎟 활동·입장',예비:'🧷 예비비'};
+  Object.keys(alloc).forEach(k=>{
+    allocRows += `<li><b>${label[k]}</b> — ${won(budget*alloc[k])} <span style="color:var(--muted)">(${Math.round(alloc[k]*100)}%)</span></li>`;
+  });
+
+  // --- 실제 장소 기반 일정 생성 ---
+  const mapLink=(name)=>`https://www.google.com/maps/search/${encodeURIComponent((placeKey&&placeKey!=='미정'?placeKey+' ':'')+name)}`;
+  const chipLink=(name)=>`<a href="${mapLink(name)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">📍${name}</a>`;
+
+  // 목적지 정규화: 넓은 지역이면 첫 세부 추천지, 아니면 dest
+  const narrowed=narrowRegion(dest, season, styles);
+  const placeKey = (narrowed?narrowed.cands[0].name.split('·')[0]:dest);
+  const pk = (placeKey||'').replace(/\s/g,'');
+  const POI = PLACES[pk] || null;
+
+  // 카테고리 우선순위: 선택 스타일 순 → 기본
+  const catOrder=[];
+  if(has('관광')) catOrder.push('명소'); if(has('문화')) catOrder.push('명소');
+  if(has('자연')) catOrder.push('자연'); if(has('액티비티')) catOrder.push('액티비티');
+  if(has('쇼핑')) catOrder.push('쇼핑'); if(has('미식')) catOrder.push('미식');
+  ['명소','자연','미식','액티비티','쇼핑'].forEach(c=>{ if(!catOrder.includes(c)) catOrder.push(c); });
+
+  // POI 풀 만들기 (카테고리별 배열, 소진하며 배치)
+  const pools={};
+  if(POI) catOrder.forEach(c=>{ pools[c]=(POI[c]||[]).slice(); });
+  const pick=(cat)=>{ if(POI&&pools[cat]&&pools[cat].length) return pools[cat].shift(); return null; };
+  const pickAny=()=>{ for(const c of catOrder){ if(pools[c]&&pools[c].length) return pools[c].shift(); } return null; };
+
+  let itin='';
+  for(let d=1; d<=days; d++){
+    let slots=[];
+    if(POI){
+      // 오전 명소/자연, 점심 미식, 오후 액티비티/쇼핑/명소, 저녁 미식
+      const morning = pick('명소')||pick('자연')||pickAny();
+      const lunch   = pick('미식')||pickAny();
+      const after   = pick('액티비티')||pick('쇼핑')||pick('자연')||pick('명소')||pickAny();
+      const dinner  = pick('미식')||pickAny();
+      slots=[
+        morning?`오전 · ${chipLink(morning)}`:'오전 · 자유 일정',
+        lunch?`점심 · ${chipLink(lunch)} 근처 맛집`:'점심 · 지역 맛집',
+        after?`오후 · ${chipLink(after)}`:'오후 · 자유 시간',
+        dinner?`저녁 · ${chipLink(dinner)}`:'저녁 · 휴식',
+      ];
+    } else {
+      // 장소 DB 없는 목적지: 구글맵 검색 링크로 안내
+      const q=(t)=>placeKey&&placeKey!=='미정'?`<a href="${mapLink(t)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">🔎 ${placeKey} ${t}</a>`:t;
+      slots=[
+        `오전 · ${q('가볼 만한 명소')}`,
+        `점심 · ${q('맛집')}`,
+        `오후 · ${has('쇼핑')?q('쇼핑 거리'):q('가볼 만한 곳')}`,
+        `저녁 · ${q('저녁 맛집')}`,
+      ];
+    }
+    itin += `<div style="margin-bottom:10px"><b style="color:var(--accent2)">Day ${d}</b><ul style="margin-top:4px">`;
+    slots.forEach(s=> itin += `<li style="margin:4px 0">${s}</li>`);
+    itin += `</ul></div>`;
+  }
+
+  // ---------- 목적지 미정 시 추천 ----------
+  let recoHtml='';
+  const destUndecided = (dest==='미정' || dest==='' || document.getElementById('scope').value==='undecided');
+  if(destUndecided){
+    const recos = recommendDestinations(season, styles, document.getElementById('scope').value, budgetType);
+    if(recos.length){
+      recoHtml = `
+      <div class="panel" style="border-color:var(--accent2)">
+        <h4><span class="badge ai">규칙 추천</span> 여행지를 아직 못 정하셨네요 — ${season!=='미정'?season+' 시기':'입력 조건'}에 맞춘 추천</h4>
+        ${recos.map((d,i)=>`
+          <div style="margin-bottom:11px;padding-bottom:11px;${i<recos.length-1?'border-bottom:1px solid var(--border)':''}">
+            <div style="font-size:15px;font-weight:700">${i+1}. ${d.name}
+              <span class="badge ${d.scope==='overseas'?'code':'ai'}" style="margin-left:6px">${d.scope==='overseas'?'해외':'국내'}</span></div>
+            <div style="font-size:13px;color:var(--muted);margin-top:3px">${d.good}</div>
+            <div style="font-size:12.5px;margin-top:5px"><b style="color:var(--accent2)">추천 이유:</b> ${d.reasons.join(' · ')}</div>
+          </div>`).join('')}
+        <div class="hint">계절·스타일·예산 조건과 맞는 정도로 점수를 매겨 상위 3곳을 골랐습니다. 마음에 드는 곳을 목적지 칸에 넣고 다시 만들면 그곳 기준으로 계획이 채워집니다.</div>
+      </div>`;
+    } else {
+      recoHtml = `<div class="warnbox">여행 시기(계절)와 스타일을 한 가지 이상 고르면 맞춤 여행지를 추천해 드릴 수 있어요.</div>`;
+    }
+  }
+
+  // ---------- 넓은 지역이면 세부 지역으로 좁히기 ----------
+  let narrowHtml='';
+  if(narrowed){
+    narrowHtml=`
+    <div class="panel" style="border-color:var(--accent)">
+      <h4><span class="badge ai">지역 좁히기</span> "${narrowed.region}"은 넓어요 — 조건에 맞는 세부 지역 추천</h4>
+      ${narrowed.cands.map((c,i)=>`
+        <div style="margin-bottom:10px;padding-bottom:10px;${i<narrowed.cands.length-1?'border-bottom:1px solid var(--border)':''}">
+          <div style="font-size:15px;font-weight:700">${i+1}. ${c.name}</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:3px">${c.why}</div>
+          ${c.reasons.length?`<div style="font-size:12.5px;margin-top:4px"><b style="color:var(--accent2)">이유:</b> ${c.reasons.join(' · ')}</div>`:''}
+        </div>`).join('')}
+      <div class="hint">가장 잘 맞는 세부 지역을 목적지 칸에 다시 넣으면 그곳 기준으로 계획·숙소가 맞춰집니다.</div>
+    </div>`;
+  }
+
+  // ---------- 숙소 추천 (예약 링크 포함) ----------
+  const nightsForStay=Math.max(1,nights);
+  const perPersonPerNight=(budget*alloc.숙박)/people/nightsForStay;
+  const stayPlace=(narrowed?narrowed.cands[0].name:dest);
+  const stayReco=recommendStays(stayPlace!=='미정'?stayPlace:'', styles, budgetType, care, perPersonPerNight);
+  const stayHtml=`
+    <div class="panel" style="border-color:var(--accent2)">
+      <h4><span class="badge ai">숙소 추천</span> 조건에 맞는 숙소 유형 + 예약 링크</h4>
+      ${stayReco.grade?`<div class="hint" style="margin-bottom:10px">💰 ${stayReco.grade}</div>`:''}
+      ${stayReco.picks.map(p=>`
+        <div style="margin-bottom:12px">
+          <div style="font-size:14.5px;font-weight:700">🏨 ${p.type}</div>
+          <div style="font-size:13px;color:var(--muted);margin:2px 0 6px">${p.why}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:7px">
+            ${p.links.map(l=>`<a href="${l.url}" target="_blank" rel="noopener" class="chip" style="text-decoration:none;color:var(--accent)">🔗 ${l.name}에서 찾기</a>`).join('')}
+          </div>
+        </div>`).join('')}
+      <div class="hint">${stayReco.place?`"${stayReco.place}" 지역 + 숙소 유형으로 예약 사이트를 바로 검색합니다.`:'목적지를 정하면 예약 링크가 그 지역으로 검색됩니다.'} 실제 요금·예약은 각 사이트에서 확인하세요.</div>
+    </div>`;
+
+  const html = `
+  <div class="summary-head">
+    <h3>${dest} ${scope!=='미정'?'('+scope+')':''} · ${nights}박 ${days}일</h3>
+    <div class="sub">${who} · ${people}명 · ${season} · ${whenText} · 이동수단 ${transport} · 스타일 ${styleTxt}</div>
+    <div class="stats">
+      <div class="stat"><div class="v">${people}명</div><div class="l">인원</div></div>
+      <div class="stat"><div class="v">${won(budget)}</div><div class="l">총예산</div></div>
+      <div class="stat"><div class="v">${won(perPerson)}</div><div class="l">1인당</div></div>
+      <div class="stat"><div class="v">${won(perDay)}</div><div class="l">하루 예산</div></div>
+    </div>
+  </div>
+
+  ${recoHtml}
+  ${narrowHtml}
+
+  ${note?`<div class="warnbox">📌 꼭 반영할 요청: ${note}</div>`:''}
+
+  <div class="panel">
+    <h4><span class="badge code">코드 계산</span> 예산 배분 (스타일 반영)</h4>
+    <ul>${allocRows}</ul>
+    <div class="hint" style="margin-top:8px">숙소 선호: ${stay} · 특별 고려: ${careTxt}</div>
+  </div>
+
+  ${stayHtml}
+
+  <div class="panel">
+    <h4><span class="badge ai">규칙 판단</span> 맞춤 체크리스트</h4>
+    <ul>${tips.map(t=>`<li>${t}</li>`).join('')||'<li>기본 조건으로 특별 주의사항 없음.</li>'}</ul>
+  </div>
+
+  <div class="panel">
+    <h4><span class="badge ai">장소 추천</span> 추천 일정 — 어디를 갈지 (${days}일)</h4>
+    ${itin}
+    <div class="hint" style="margin-top:6px">📍장소 이름을 누르면 구글 지도로 위치·후기를 바로 확인할 수 있습니다. 등록된 목적지(제주·부산·강릉·오사카·교토·도쿄·후쿠오카·다낭·방콕)는 실제 명소로, 그 외 목적지는 지도 검색 링크로 채웁니다.</div>
+  </div>
+  `;
+  const r=document.getElementById('result');
+  r.innerHTML=html;
+  r.classList.add('show');
+  r.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+document.getElementById('planBtn').addEventListener('click',buildPlan);
+document.getElementById('resetBtn').addEventListener('click',()=>location.reload());
+
+// ================= 실제 항공권 가격 조회 (Travelpayouts 프록시) =================
+// 목적지 이름 -> IATA 도시/공항 코드 (자주 쓰는 것만; 없으면 직접 입력)
+const CITY_TO_IATA={
+  '제주':'CJU','제주도':'CJU','부산':'PUS','서울':'SEL','김포':'GMP','인천':'ICN',
+  '대구':'TAE','광주':'KWJ','여수':'RSU','울산':'USN','포항':'KPO','청주':'CJJ',
+  '도쿄':'TYO','동경':'TYO','오사카':'OSA','후쿠오카':'FUK','삿포로':'SPK','홋카이도':'SPK',
+  '오키나와':'OKA','방콕':'BKK','다낭':'DAD','하노이':'HAN','호치민':'SGN','발리':'DPS',
+  '싱가포르':'SIN','홍콩':'HKG','타이베이':'TPE','대만':'TPE','괌':'GUM','세부':'CEB',
+  '파리':'PAR','런던':'LON','로마':'ROM','뉴욕':'NYC','LA':'LAX','로스앤젤레스':'LAX'
+};
+
+const destInput=document.getElementById('dest'), arrCodeInput=document.getElementById('arrCode');
+destInput.addEventListener('input',()=>{
+  const key=destInput.value.trim().replace(/\s/g,'');
+  if(CITY_TO_IATA[key] && !arrCodeInput.dataset.manual){
+    arrCodeInput.value=CITY_TO_IATA[key];
+  }
+});
+arrCodeInput.addEventListener('input',()=>{ arrCodeInput.dataset.manual='1'; });
+
+// 서버 상태 확인 (토큰 설정 여부)
+async function checkStatus(){
+  const el=document.getElementById('apiStatus');
+  try{
+    const r=await fetch('/api/status');
+    const d=await r.json();
+    if(d.keys_configured){
+      el.style.background='rgba(126,226,184,.1)'; el.style.borderColor='var(--accent2)'; el.style.color='var(--accent2)';
+      el.innerHTML='✅ Travelpayouts 토큰 설정됨 — 실제 항공권 가격을 조회할 수 있습니다.';
+    }else{
+      el.innerHTML='⚠️ 토큰 미설정 — 같은 폴더의 <code>.env</code>에 <code>TRAVELPAYOUTS_TOKEN</code>을 넣고 서버를 다시 시작하세요. (무료 발급: travelpayouts.com 가입 → 프로필 → API token, 신용카드 불필요)';
+    }
+  }catch(e){
+    el.style.background='rgba(154,160,173,.08)'; el.style.borderColor='var(--border)'; el.style.color='var(--muted)';
+    el.innerHTML='ℹ️ 항공권 조회는 지금 꺼져 있습니다. <code>python server.py</code>로 실행하고 <code>http://127.0.0.1:8777/</code>로 접속하면 켜집니다. <b>여행 계획·목적지·숙소 추천 등 나머지 기능은 파일로 열어도 그대로 작동합니다.</b>';
+    const b=document.getElementById('flightBtn'); if(b){ b.disabled=true; b.style.opacity=.5; b.style.cursor='not-allowed'; }
+  }
+}
+
+function fmtDate(iso){ if(!iso) return ''; return String(iso).replace('T',' ').slice(0,16); }
+function airlineLogo(code){ return code?`<img src="https://pics.avs.io/60/60/${code}.png" alt="${code}" style="height:18px;vertical-align:middle;margin-right:5px" onerror="this.style.display='none'">`:''; }
+
+async function searchFlights(){
+  const box=document.getElementById('flightResult');
+  const origin=document.getElementById('origin').value;
+  const dest=(arrCodeInput.value||'').trim().toUpperCase();
+  const depDate=document.getElementById('start').value;   // YYYY-MM-DD (있으면)
+  const retDate=document.getElementById('end').value;
+  // 정확한 날짜가 없으면 러프 시기 → 다음 달(YYYY-MM)로 대략 조회
+  let depParam=depDate;
+  if(!depParam){
+    const rough=selectedOne('roughWhen');
+    const now=new Date();
+    if(rough==='다음달'){ now.setMonth(now.getMonth()+1); }
+    depParam = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'); // YYYY-MM
+  }
+  if(!dest){ box.innerHTML='<div class="warnbox">도착 도시 코드를 입력하세요 (예: CJU, TYO, BKK).</div>'; return; }
+
+  box.innerHTML='<div class="panel">🔎 실제 항공권 가격을 조회하는 중…</div>';
+  const params=new URLSearchParams({origin,dest,departureDate:depParam,currency:'krw'});
+  if(retDate) params.set('returnDate',retDate);
+  if(document.getElementById('nonStop').checked) params.set('nonStop','true');
+
+  try{
+    const r=await fetch('/api/flights?'+params.toString());
+    const d=await r.json();
+    if(!d.keys_configured){ box.innerHTML='<div class="warnbox">토큰이 설정되지 않아 실제 조회를 할 수 없습니다.</div>'; return; }
+    if(d.error){ box.innerHTML='<div class="warnbox">조회 오류: '+d.error+(d.detail?'<div class="hint">'+d.detail+'</div>':'')+'</div>'; return; }
+    if(!d.flights||!d.flights.length){ box.innerHTML='<div class="panel">해당 조건의 항공권을 찾지 못했습니다. 도시 코드·날짜를 바꿔보세요. (데이터는 최근 사용자 검색 캐시 기반이라 일부 노선은 비어 있을 수 있습니다.)</div>'; return; }
+
+    const rows=d.flights.map((f,i)=>{
+      const price=f.price!=null?Number(f.price).toLocaleString():'—';
+      const dur=f.duration?`${Math.floor(f.duration/60)}시간 ${f.duration%60}분`:'';
+      const book=f.link?`<a href="${f.link}" target="_blank" rel="noopener" class="chip" style="text-decoration:none;color:var(--accent)">🔗 예약/검색</a>`:'';
+      return `<div style="padding:10px 0;${i<d.flights.length-1?'border-bottom:1px solid var(--border)':''}">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
+          <b style="font-size:16px;color:var(--accent2)">${price} ${f.currency||'KRW'}</b>
+          <span class="hint">${f.transfers===0?'직항':f.transfers+'회 경유'} ${dur?'· '+dur:''}</span>
+        </div>
+        <div style="font-size:12.5px;margin-top:3px">${airlineLogo(f.airline)}${f.origin} → ${f.destination} · ${f.airline||''}${f.flight_number||''} · 출발 ${fmtDate(f.departure_at)}${f.return_at?' · 귀국 '+fmtDate(f.return_at):''}</div>
+        <div style="margin-top:5px">${book}</div>
+      </div>`;
+    }).join('');
+    box.innerHTML=`<div class="panel" style="border-color:var(--accent2)">
+      <h4><span class="badge code">실제 데이터</span> 항공권 최저가 (${origin} → ${dest}, ${depParam}${retDate?' ~ '+retDate:''})</h4>
+      ${rows}
+      <div class="hint" style="margin-top:8px">Travelpayouts(Aviasales) 캐시 기반 실제 검색가입니다. 가격은 변동·만료될 수 있으니 '예약/검색' 링크에서 최종 확인하세요.</div>
+    </div>`;
+  }catch(e){
+    box.innerHTML='<div class="warnbox">서버에 연결하지 못했습니다. <code>python server.py</code>로 실행 중인지 확인하세요.</div>';
+  }
+}
+document.getElementById('flightBtn').addEventListener('click',searchFlights);
+checkStatus();
+</script>
+</body>
+</html>
